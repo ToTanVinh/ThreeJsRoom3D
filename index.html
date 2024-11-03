@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3D Room with Clickable Image</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+      }
+      canvas {
+        display: block;
+      }
+      #infoBox {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 10px;
+        display: none;
+        border-radius: 5px;
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="infoBox">This is a picture of Messi in the room.</div>
+    <script type="module">
+      import * as THREE from "three";
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+      );
+
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+      controls.dampingFactor = 0.5;
+      controls.screenSpacePanning = true; // Prevent panning off the screen
+
+      // Set limits for controls
+      controls.minPolarAngle = Math.PI / 4; // Limit vertical rotation (min)
+      controls.maxPolarAngle = Math.PI / 2; // Limit vertical rotation (max)
+      controls.maxAzimuthAngle = Math.PI; // Limit horizontal rotation (max)
+      controls.minAzimuthAngle = -Math.PI / 4; // Limit horizontal rotation (min)
+
+      // Set camera position
+      camera.position.set(0, 2, 5);
+
+      const raycaster = new THREE.Raycaster();
+      const mouse = new THREE.Vector2();
+      const infoBox = document.getElementById("infoBox");
+
+      function createImage(texturePath, position, rotation) {
+        const textureLoader = new THREE.TextureLoader();
+        const pictureGeometry = new THREE.PlaneGeometry(2, 2);
+        const pictureMaterial = new THREE.MeshBasicMaterial({
+          map: textureLoader.load(texturePath),
+        });
+        const picture = new THREE.Mesh(pictureGeometry, pictureMaterial);
+        picture.position.copy(position);
+        picture.rotation.copy(rotation);
+        return picture;
+      }
+
+      // Tạo phòng đầu tiên
+      function createRoom(positionZ) {
+        const wallGeometry = new THREE.BoxGeometry(20, 5, 0.1);
+        const wallMaterial = new THREE.MeshBasicMaterial({ color: 0x808080 });
+
+        // Tường phía sau
+        const backWall = new THREE.Mesh(wallGeometry, wallMaterial);
+        backWall.position.z = positionZ;
+        scene.add(backWall);
+
+        // Tường phía trước
+        const frontWall = new THREE.Mesh(wallGeometry, wallMaterial);
+        frontWall.position.z = positionZ + 20;
+        scene.add(frontWall);
+
+        // Tường bên trái
+        const sideWallGeometry = new THREE.BoxGeometry(0.1, 5, 20);
+        const leftWall = new THREE.Mesh(sideWallGeometry, wallMaterial);
+        leftWall.position.x = -10;
+        leftWall.position.z = positionZ + 10;
+        scene.add(leftWall);
+
+        // Tường bên phải
+        const rightWall = new THREE.Mesh(sideWallGeometry, wallMaterial);
+        rightWall.position.x = 10;
+        rightWall.position.z = positionZ + 10;
+        scene.add(rightWall);
+
+        // Sàn
+        const floorGeometry = new THREE.BoxGeometry(20, 0.1, 20);
+        const floor = new THREE.Mesh(
+          floorGeometry,
+          new THREE.MeshBasicMaterial({ color: "#a1a1a1" })
+        );
+        floor.position.y = -2.5;
+        floor.position.z = positionZ + 10;
+        scene.add(floor);
+      }
+
+      // Tạo hai phòng với khoảng cách z
+      createRoom(-5); // Phòng đầu tiên
+      createRoom(15); // Phòng thứ hai
+
+      const picture1 = createImage(
+        "./mess-1.png",
+        new THREE.Vector3(0, 0, -4.9),
+        new THREE.Euler(0, 0, 0)
+      );
+      scene.add(picture1);
+      picture1.userData.onClickMessage =
+        "This is a picture of Messi in the room.";
+
+      // const picture2 = createImage(
+      //   "./mess-2.png",
+      //   new THREE.Vector3(0, 0, 14),
+      //   new THREE.Euler(0, Math.PI, 0)
+      // );
+      // scene.add(picture2);
+
+      const picture3 = createImage(
+        "./mess-3.png",
+        new THREE.Vector3(-9.9, 0, 2),
+        new THREE.Euler(0, Math.PI / 2, 0)
+      );
+      picture3.userData.onClickMessage =
+        "This is yet another picture of Messi.";
+      scene.add(picture3);
+
+      const picture4 = createImage(
+        "./door.png",
+        new THREE.Vector3(0, 0, 15.1),
+        new THREE.Euler(0, 0, 0)
+      );
+      picture4.scale.set(1, 2, 0);
+      scene.add(picture4);
+
+      const picture5 = createImage(
+        "./door.png",
+        new THREE.Vector3(0, 0, 14.9),
+        new THREE.Euler(0, Math.PI, 0)
+      );
+      picture5.scale.set(1, 2, 0);
+      scene.add(picture5);
+
+      const light = new THREE.PointLight(0xffffff, 1, 100);
+      light.position.set(10, 10, 10);
+      scene.add(light);
+
+      // Hàm tạo mũi tên di chuyển
+      function createArrow(position, rotation, onClickCallback) {
+        const arrowGeometry = new THREE.PlaneGeometry(1, 1);
+        const textureLoader = new THREE.TextureLoader();
+        const arrowTexture = textureLoader.load("./arrow.png");
+        const arrowMaterial = new THREE.MeshBasicMaterial({
+          color: 0x00ff00,
+          side: THREE.DoubleSide,
+          transparent: true,
+          map: arrowTexture,
+        });
+        const arrow = new THREE.Mesh(arrowGeometry, arrowMaterial);
+        arrow.position.copy(position);
+        arrow.rotation.copy(rotation);
+        arrow.userData.onClick = onClickCallback;
+        scene.add(arrow);
+      }
+
+      // Mũi tên chuyển đến phòng tiếp theo
+      createArrow(
+        new THREE.Vector3(0, -2, 12),
+        new THREE.Euler(Math.PI / 2, 0, Math.PI / 2),
+        () => {
+          // Đặt vị trí và góc nhìn của camera
+          camera.position.set(0, 0, 20); // Chuyển đến vị trí gần hơn để mượt hơn
+          controls.target.set(-2.5, 0, 20); // Giảm góc nhìn để chuyển động mượt
+          controls.update();
+        }
+      );
+
+      // Mũi tên quay lại phòng trước
+      createArrow(
+        new THREE.Vector3(0, -2, 17.5),
+        new THREE.Euler(Math.PI / 2, Math.PI, -Math.PI / 2),
+        () => {
+          camera.position.set(0, 0, 10);
+          controls.target.set(0, 0, 10);
+          controls.update();
+        }
+      );
+
+      // Mũi tên di chuyển đến picture1
+      createArrow(
+        new THREE.Vector3(0, -2, -2), // Vị trí của mũi tên
+        new THREE.Euler(Math.PI / 2, Math.PI, -Math.PI / 2), // Góc của mũi tên
+        () => {
+          camera.position.set(0, 0, 0);
+          controls.target.set(0, 0, -4.9);
+          controls.update();
+        }
+      );
+
+      // Mũi tên di chuyển đến picture3
+      createArrow(
+        new THREE.Vector3(-6, -2, 2), // Vị trí của mũi tên
+        new THREE.Euler(Math.PI / 2, 0, -Math.PI), // Góc của mũi tên
+        () => {
+          camera.position.set(-4, 0, 2); // Di chuyển camera đến vị trí của picture3
+          controls.target.set(-4.9, 0, 2);
+          controls.update(); // Đặt góc nhìn của camera để hướng vào picture3
+        }
+      );
+
+      // Hàm xử lý click chuột
+      function onMouseClick(event) {
+        event.preventDefault();
+
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+
+        const intersects = raycaster.intersectObjects(scene.children);
+
+        for (let i = 0; i < intersects.length; i++) {
+          const object = intersects[i].object;
+          if (object.userData.onClick) {
+            object.userData.onClick(); // Di chuyển camera
+          } else if (object.userData.onClickMessage) {
+            // Hiển thị thông tin khi click vào ảnh
+            infoBox.style.display = "block";
+            infoBox.innerText = object.userData.onClickMessage;
+          }
+        }
+      }
+
+      // Ẩn hộp thông tin khi di chuyển chuột để đặt lại tương tác
+      function onMouseMove() {
+        infoBox.style.display = "none";
+      }
+
+      window.addEventListener("click", onMouseClick, false);
+      window.addEventListener("mousemove", onMouseMove, false);
+
+      // Vòng lặp render
+      function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      window.addEventListener("resize", () => {
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+      });
+    </script>
+  </body>
+</html>
